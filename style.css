@@ -1,0 +1,92 @@
+@
+/* 
+ * Styles personnalisés pour le jeu Gardiens des Cités Perdues
+ * Animations et effets visuels pour une expérience immersive
+ */
+
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out;
+}
+
+.character-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.character-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(139, 92, 246, 0.4);
+}
+
+.character-card.selected {
+    border-color: #a855f7;
+    border-width: 3px;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.6);
+}
+
+.power-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.power-card:hover {
+    transform: scale(1.05);
+}
+
+.power-card.selected {
+    border-color: #10b981;
+    border-width: 3px;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+}
+
+.power-card.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Effet de brillance pour les pouvoirs */
+.power-icon {
+    filter: drop-shadow(0 0 8px currentColor);
+}
+
+/* Styles pour les boutons de personnalisation */
+.customization-btn {
+    transition: all 0.2s ease;
+}
+
+.customization-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Canvas de jeu */
+#game-canvas {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}

@@ -1,0 +1,32 @@
+# Configuration Netlify pour le déploiement
+[build]
+  # Pas de build nécessaire, c'est un site statique
+  publish = "."
+
+[[redirects]]
+  # Rediriger toutes les routes vers index-phaser.html (pour le SPA)
+  from = "/*"
+  to = "/index-phaser.html"
+  status = 200
+
+# Headers pour les assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/sprites/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+

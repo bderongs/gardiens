@@ -1,0 +1,64 @@
+{
+  "sophie": {
+    "name": "Sophie Foster",
+    "gender": "female",
+    "sprites": {
+      "body": "sprites/body/female_light.png",
+      "hair": "sprites/hair/female_long_blonde.png",
+      "clothes": "sprites/clothes/female_dress.png"
+    },
+    "description": "Télépathe exceptionnelle, cheveux blonds longs, style élégant"
+  },
+  "fitz": {
+    "name": "Fitz Vacker",
+    "gender": "male",
+    "sprites": {
+      "body": "sprites/body/male_light.png",
+      "hair": "sprites/hair/male_short_brunette.png",
+      "clothes": "sprites/clothes/male_shirt_white.png"
+    },
+    "description": "Télépathe talentueux, cheveux bruns courts, style formel"
+  },
+  "keefe": {
+    "name": "Keefe Sencen",
+    "gender": "male",
+    "sprites": {
+      "body": "sprites/body/male_tanned.png",
+      "hair": "sprites/hair/male_messy_blonde.png",
+      "clothes": "sprites/clothes/male_shirt_white.png"
+    },
+    "description": "Empathe, cheveux blonds ébouriffés, style décontracté"
+  },
+  "dex": {
+    "name": "Dex Dizznee",
+    "gender": "male",
+    "sprites": {
+      "body": "sprites/body/male_light.png",
+      "hair": "sprites/hair/male_short_redhead.png",
+      "clothes": "sprites/clothes/male_shirt_white.png"
+    },
+    "description": "Génie technique, cheveux roux courts, style décontracté"
+  },
+  "biana": {
+    "name": "Biana Vacker",
+    "gender": "female",
+    "sprites": {
+      "body": "sprites/body/female_light.png",
+      "hair": "sprites/hair/female_long_blonde.png",
+      "clothes": "sprites/clothes/female_dress.png"
+    },
+    "description": "Flasheuse, cheveux blonds longs, style élégant"
+  },
+  "tam": {
+    "name": "Tam Song",
+    "gender": "male",
+    "sprites": {
+      "body": "sprites/body/male_dark.png",
+      "hair": "sprites/hair/male_short_brunette.png",
+      "clothes": "sprites/clothes/male_shirt_white.png"
+    },
+    "description": "Shadeur, cheveux noirs courts, style sombre"
+  }
+}
+
+

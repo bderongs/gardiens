@@ -1,0 +1,62 @@
+{
+  "hair": {
+    "female": {
+      "long": [
+        "light-blonde2",
+        "brunette2",
+        "redhead2",
+        "white-blonde2",
+        "gray"
+      ],
+      "medium": [
+        "shoulderl"
+      ],
+      "short": [
+        "pixie"
+      ],
+      "ponytail": [
+        "ponytail"
+      ]
+    },
+    "male": {
+      "short": [
+        "plain/brunette2",
+        "plain/light-blonde2",
+        "plain/redhead2",
+        "plain/black"
+      ],
+      "messy": [
+        "messy2/light-blonde2"
+      ],
+      "long": [
+        "long"
+      ]
+    }
+  },
+  "body": {
+    "female": [
+      "light",
+      "dark",
+      "tanned"
+    ],
+    "male": [
+      "light",
+      "dark",
+      "tanned"
+    ]
+  },
+  "clothes": {
+    "shirts": [
+      "white_longsleeve",
+      "teal_longsleeve",
+      "brown_longsleeve",
+      "maroon_longsleeve"
+    ],
+    "dresses": [
+      "dress_w_sash_female",
+      "underdress"
+    ]
+  }
+}
+
+

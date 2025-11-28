@@ -1,0 +1,15 @@
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Dossiers temporaires (optionnel, à adapter selon vos besoins)
+# node_modules/
+
+# Fichiers de configuration locaux
+.env
+.env.local
+
