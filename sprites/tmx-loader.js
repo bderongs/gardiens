@@ -11,6 +11,7 @@ class TMXLoader {
         this.tileHeight = 16;
         this.spacing = 0; // Espacement entre les tuiles dans la spritesheet (0 par défaut, sera ajusté si nécessaire)
         this.tilesPerRow = 0; // Sera calculé après chargement de la spritesheet
+        this.tilesets = []; // Liste de tous les tilesets chargés [{firstGid, spritesheetImage, tileWidth, tileHeight, tilesPerRow, spacing}]
     }
 
     /**
@@ -31,6 +32,27 @@ class TMXLoader {
                     this.tilesPerRow = Math.floor(img.width / this.tileWidth);
                 }
                 console.log(`Spritesheet chargée: ${img.width}x${img.height}, tuiles ${this.tileWidth}x${this.tileHeight}, ${this.tilesPerRow} tuiles par ligne`);
+                resolve(img);
+            };
+            img.onerror = (err) => {
+                console.error('Erreur lors du chargement de la spritesheet:', spritesheetPath, err);
+                reject(err);
+            };
+            img.src = spritesheetPath;
+        });
+    }
+    
+    /**
+     * Charge une spritesheet pour un tileset spécifique (sans modifier les propriétés globales)
+     * @param {string} spritesheetPath - Chemin vers la spritesheet
+     * @param {number} tileWidth - Largeur des tuiles
+     * @param {number} tileHeight - Hauteur des tuiles
+     * @returns {Promise<Image>}
+     */
+    async loadSpritesheetForTileset(spritesheetPath, tileWidth, tileHeight) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
                 resolve(img);
             };
             img.onerror = (err) => {
@@ -101,51 +123,82 @@ class TMXLoader {
         this.tileWidth = tileWidth;
         this.tileHeight = tileHeight;
         
-        // Parser les propriétés de collision depuis le tileset
+        // Parser les propriétés de collision depuis TOUS les tilesets
         const collisionMap = new Map(); // Map<gid, hasCollision>
-        const tileset = map.querySelector('tileset');
-        const firstGid = parseInt(tileset.getAttribute('firstgid')) || 1;
+        const tilesets = map.querySelectorAll('tileset');
+        this.tilesets = []; // Réinitialiser la liste des tilesets
         
-        // Parser toutes les tuiles avec leurs propriétés
-        const tileElements = tileset.querySelectorAll('tile');
-        for (const tileEl of tileElements) {
-            const tileId = parseInt(tileEl.getAttribute('id'));
-            const gid = firstGid + tileId; // GID réel dans la carte
+        // Charger TOUS les tilesets
+        for (const tileset of tilesets) {
+            const firstGid = parseInt(tileset.getAttribute('firstgid')) || 1;
             
-            // Chercher la propriété "collides"
-            const properties = tileEl.querySelector('properties');
-            if (properties) {
-                const collidesProp = properties.querySelector('property[name="collides"]');
-                if (collidesProp && collidesProp.getAttribute('value') === 'true') {
-                    collisionMap.set(gid, true);
+            // Parser toutes les tuiles avec leurs propriétés
+            const tileElements = tileset.querySelectorAll('tile');
+            for (const tileEl of tileElements) {
+                const tileId = parseInt(tileEl.getAttribute('id'));
+                const gid = firstGid + tileId; // GID réel dans la carte
+                
+                // Chercher la propriété "collides"
+                const properties = tileEl.querySelector('properties');
+                if (properties) {
+                    const collidesProp = properties.querySelector('property[name="collides"]');
+                    if (collidesProp && collidesProp.getAttribute('value') === 'true') {
+                        collisionMap.set(gid, true);
+                    }
                 }
             }
+            
+            // Charger la spritesheet de ce tileset
+            const image = tileset.querySelector('image');
+            if (!image) continue; // Tileset sans image (tileset externe)
+            
+            let spritesheetPath = image.getAttribute('source');
+            
+            // Gérer les chemins relatifs (../../) dans le TMX
+            if (spritesheetPath.startsWith('../../')) {
+                // Chemin absolu depuis Downloads, essayer de le résoudre
+                const fileName = spritesheetPath.split('/').pop();
+                spritesheetPath = fileName;
+            }
+            
+            const basePath = tmxPath.substring(0, tmxPath.lastIndexOf('/'));
+            const fullSpritesheetPath = basePath ? `${basePath}/${spritesheetPath}` : spritesheetPath;
+            
+            console.log(`TMXLoader: Chargement du tileset ${firstGid}: ${fullSpritesheetPath}`);
+            
+            // Charger la spritesheet pour ce tileset
+            const tilesetImage = await this.loadSpritesheetForTileset(fullSpritesheetPath, tileWidth, tileHeight);
+            
+            // Calculer tilesPerRow pour ce tileset
+            let tilesPerRow = 0;
+            if (tilesetImage) {
+                if (this.spacing > 0) {
+                    tilesPerRow = Math.floor((tilesetImage.width + this.spacing) / (tileWidth + this.spacing));
+                } else {
+                    tilesPerRow = Math.floor(tilesetImage.width / tileWidth);
+                }
+            }
+            
+            // Stocker les informations du tileset
+            this.tilesets.push({
+                firstGid: firstGid,
+                spritesheetImage: tilesetImage,
+                tileWidth: tileWidth,
+                tileHeight: tileHeight,
+                tilesPerRow: tilesPerRow,
+                spacing: this.spacing
+            });
+            
+            console.log(`TMXLoader: Tileset ${firstGid} chargé: ${tilesetImage ? tilesetImage.width + 'x' + tilesetImage.height : 'ERREUR'}, ${tilesPerRow} tuiles par ligne`);
         }
         
-        // Charger la spritesheet (après avoir mis à jour tileWidth)
-        const image = tileset.querySelector('image');
-        let spritesheetPath = image.getAttribute('source');
-        
-        // Gérer les chemins relatifs (../../) dans le TMX
-        if (spritesheetPath.startsWith('../../')) {
-            // Chemin absolu depuis Downloads, essayer de le résoudre
-            const fileName = spritesheetPath.split('/').pop();
-            // Essayer plusieurs emplacements possibles
-            const possiblePaths = [
-                `assets/${fileName}`,
-                `sprites/${fileName}`,
-                spritesheetPath.replace('../../Downloads/', '~/Downloads/')
-            ];
-            // Pour l'instant, utiliser le nom du fichier directement
-            spritesheetPath = fileName;
+        // Utiliser le premier tileset comme tileset par défaut (pour compatibilité)
+        if (this.tilesets.length > 0) {
+            this.spritesheetImage = this.tilesets[0].spritesheetImage;
+            this.tilesPerRow = this.tilesets[0].tilesPerRow;
         }
         
-        const basePath = tmxPath.substring(0, tmxPath.lastIndexOf('/'));
-        const fullSpritesheetPath = basePath ? `${basePath}/${spritesheetPath}` : spritesheetPath;
-        
-        console.log(`TMXLoader: Chargement de la spritesheet: ${fullSpritesheetPath}`);
-        await this.loadSpritesheet(fullSpritesheetPath);
-        console.log(`TMXLoader: Spritesheet chargée: ${this.spritesheetImage ? this.spritesheetImage.width + 'x' + this.spritesheetImage.height : 'ERREUR'}`);
+        const firstGid = this.tilesets.length > 0 ? this.tilesets[0].firstGid : 1;
         
         // Parser les layers
         const layers = [];
@@ -195,37 +248,61 @@ class TMXLoader {
     }
 
     /**
+     * Trouve le tileset correspondant à un GID
+     * @param {number} gid - Global Tile ID
+     * @returns {Object|null} Tileset correspondant ou null
+     */
+    findTilesetForGid(gid) {
+        // Parcourir les tilesets en ordre inverse pour trouver le dernier tileset dont firstGid <= gid
+        for (let i = this.tilesets.length - 1; i >= 0; i--) {
+            const tileset = this.tilesets[i];
+            if (gid >= tileset.firstGid) {
+                return tileset;
+            }
+        }
+        // Si aucun tileset trouvé, utiliser le premier (pour compatibilité)
+        return this.tilesets.length > 0 ? this.tilesets[0] : null;
+    }
+    
+    /**
      * Extrait une tuile de la spritesheet
-     * @param {number} tileIndex - Index de la tuile (GID - 1, car firstgid=1)
+     * @param {number} gid - Global Tile ID (pas un index, mais le GID réel)
      * @param {CanvasRenderingContext2D} ctx - Contexte de destination
      * @param {number} destX - Position X de destination
      * @param {number} destY - Position Y de destination
      * @param {number} scale - Échelle
      */
-    drawTile(tileIndex, ctx, destX, destY, scale = 1) {
-        if (!this.spritesheetImage || tileIndex === 0) {
-            return; // Pas de tuile ou tuile vide
+    drawTile(gid, ctx, destX, destY, scale = 1) {
+        if (gid === 0) {
+            return; // Tuile vide
         }
         
-        // GID commence à 1, donc on soustrait 1 pour l'index
-        const index = tileIndex - 1;
+        // Trouver le tileset correspondant à ce GID
+        const tileset = this.findTilesetForGid(gid);
+        if (!tileset || !tileset.spritesheetImage) {
+            console.warn(`Tileset non trouvé pour GID ${gid}`);
+            return;
+        }
+        
+        // Calculer l'index relatif dans ce tileset
+        const relativeIndex = gid - tileset.firstGid;
         
         // Calculer la position dans la spritesheet
-        const col = index % this.tilesPerRow;
-        const row = Math.floor(index / this.tilesPerRow);
+        const col = relativeIndex % tileset.tilesPerRow;
+        const row = Math.floor(relativeIndex / tileset.tilesPerRow);
         
-        const srcX = col * (this.tileWidth + this.spacing);
-        const srcY = row * (this.tileHeight + this.spacing);
+        const srcX = col * (tileset.tileWidth + tileset.spacing);
+        const srcY = row * (tileset.tileHeight + tileset.spacing);
         
-        const destSize = this.tileWidth * scale;
+        const destSize = tileset.tileWidth * scale;
         
         // Désactiver l'anti-aliasing pour un rendu pixel-perfect
         const oldSmoothing = ctx.imageSmoothingEnabled;
         ctx.imageSmoothingEnabled = false;
         
         ctx.drawImage(
-            this.spritesheetImage,
-            srcX, srcY, this.tileWidth, this.tileHeight,
+            tileset.spritesheetImage,
+            srcX, srcY, tileset.tileWidth, tileset.tileHeight,
             destX, destY, destSize, destSize
         );
         

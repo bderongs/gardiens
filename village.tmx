@@ -1,7 +1,167 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="1">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="5" nextobjectid="7">
  <tileset firstgid="1" name="Village" tilewidth="32" tileheight="32" tilecount="855" columns="19">
   <image source="assets/Serene_Village_32x32.png" width="608" height="1440"/>
+  <tile id="11">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="12">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="13">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="20">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="21">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="30">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="31">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="32">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="39">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="40">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="49">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="50">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="51">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="79">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="80">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="81">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="82">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="83">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="84">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="98">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="103">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="104">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="117">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="118">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="119">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="120">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="121">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="122">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="123">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="130">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="131">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
+  <tile id="132">
+   <properties>
+    <property name="collides" value="true"/>
+   </properties>
+  </tile>
   <tile id="133">
    <properties>
     <property name="collides" value="true"/>
@@ -1174,6 +1334,9 @@
   </tile>
  </tileset>
  <layer id="1" name="Ground" width="30" height="20">
+  <properties>
+   <property name="collides" value="true"/>
+  </properties>
   <data encoding="csv">
 46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,100,46,46,
 46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,32,32,32,32,100,100,100,
@@ -1197,6 +1360,38 @@
 46,46,46,46,46,46,46,46,43,43,43,43,43,43,43,43,43,43,43,43,43,43,43,43,43,47,47,43,43,43
 </data>
  </layer>
+ <objectgroup id="4" name="portes">
+  <object id="1" x="495.506" y="418.994">
+   <properties>
+    <property name="targetMap" value="maison.tmx"/>
+   </properties>
+  </object>
+  <object id="2" x="721.399" y="416.565">
+   <properties>
+    <property name="targetMap" value="maison.tmx"/>
+   </properties>
+  </object>
+  <object id="3" x="848.919" y="416.565">
+   <properties>
+    <property name="targetMap" value="maison.tmx"/>
+   </properties>
+  </object>
+  <object id="4" x="365.557" y="417.78">
+   <properties>
+    <property name="targetMap" value="maison.tmx"/>
+   </properties>
+  </object>
+  <object id="5" x="238.037" y="416.565">
+   <properties>
+    <property name="targetMap" value="maison.tmx"/>
+   </properties>
+  </object>
+  <object id="6" x="109.303" y="416.565">
+   <properties>
+    <property name="targetMap" value="maison.tmx"/>
+   </properties>
+  </object>
+ </objectgroup>
  <layer id="3" name="Décor" width="30" height="20">
   <data encoding="csv">
 0,0,0,295,296,297,298,299,295,296,297,298,299,295,296,297,298,299,0,0,0,0,0,0,0,0,0,0,0,0,

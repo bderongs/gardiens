@@ -369,19 +369,36 @@ class TopDownTilemap {
             return false;
         }
         
+        // Vérifier d'abord les objets (murs, etc.)
         const tile = this.tiles[gridY] && this.tiles[gridY][gridX];
-        if (!tile) {
-            return true;
+        if (tile) {
+            // Si c'est une tuile TMX, vérifier les propriétés de collision
+            if (tile.path === 'tmx' && tile.gid && this.tmxCollisionMap) {
+                if (tmxLoader.hasCollision(tile.gid, this.tmxCollisionMap)) {
+                    return false; // Collision détectée
+                }
+            } else {
+                // Sinon, utiliser la liste des types non traversables
+                const nonWalkableTypes = ['wall', 'wall_corner', 'castle_wall', 'house_wall', 'tree'];
+                if (nonWalkableTypes.includes(tile.type)) {
+                    return false; // Type non traversable
+                }
+            }
         }
         
-        // Si c'est une tuile TMX, vérifier les propriétés de collision
-        if (tile.path === 'tmx' && tile.gid && this.tmxCollisionMap) {
-            return !tmxLoader.hasCollision(tile.gid, this.tmxCollisionMap);
+        // Vérifier aussi les tuiles de sol (ground) pour les collisions (ex: eau)
+        const groundTile = this.ground[gridY] && this.ground[gridY][gridX];
+        if (groundTile) {
+            // Si c'est une tuile TMX de sol avec collision (ex: eau), elle n'est pas traversable
+            if (groundTile.path === 'tmx' && groundTile.gid && this.tmxCollisionMap) {
+                if (tmxLoader.hasCollision(groundTile.gid, this.tmxCollisionMap)) {
+                    return false; // Sol avec collision (eau, etc.)
+                }
+            }
         }
         
-        // Sinon, utiliser la liste des types non traversables
-        const nonWalkableTypes = ['wall', 'wall_corner', 'castle_wall', 'house_wall', 'tree'];
-        return !nonWalkableTypes.includes(tile.type);
+        // Si aucune collision détectée, la position est traversable
+        return true;
     }
 
     /**
@@ -408,6 +425,8 @@ class TopDownTilemap {
             // Ground -> Décor (ou Floor -> Objects selon le fichier)
             for (const layer of mapData.layers) {
                 const layerName = layer.name.toLowerCase();
+                const isGroundLayer = layerName === 'floor' || layerName === 'ground' || layerName === 'ground/terrain' || layerName === 'ground overlay' || layerName === 'sol';
+                console.log(`📋 Layer "${layer.name}" (${layerName}) → ${isGroundLayer ? 'SOL' : 'OBJET'}`);
                 
                 for (let y = 0; y < layer.height && y < height; y++) {
                     for (let x = 0; x < layer.width && x < width; x++) {
@@ -418,7 +437,7 @@ class TopDownTilemap {
                         
                         // Déterminer si c'est un sol ou un objet selon le layer
                         // "Ground" = sol, "Décor" ou autres = objets
-                        if (layerName === 'floor' || layerName === 'ground' || layerName === 'ground/terrain' || layerName === 'ground overlay') {
+                        if (isGroundLayer) {
                             // C'est un sol
                             this.ground[y][x] = {
                                 type: 'tmx_tile',
