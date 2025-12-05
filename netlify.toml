@@ -6,9 +6,9 @@
   functions = "netlify/functions"
 
 [[redirects]]
-  # Rediriger toutes les routes vers index-phaser.html (pour le SPA)
+  # Rediriger toutes les routes vers index.html (pour le SPA)
   from = "/*"
-  to = "/index-phaser.html"
+  to = "/index.html"
   status = 200
 
 # Headers pour les assets

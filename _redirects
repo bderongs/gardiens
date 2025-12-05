@@ -1,5 +1,5 @@
 # Redirections Netlify
-# Rediriger toutes les routes vers index-phaser.html pour le SPA
-/*    /index-phaser.html   200
+# Rediriger toutes les routes vers index.html pour le SPA
+/*    /index.html   200
 
 
