@@ -14,4 +14,7 @@ npm-debug.log*
 .env.local
 config-api.js
 
+# Dossier temporaire de sprites (non nécessaire pour le déploiement)
+lpc-sprites-temp/
+
 
