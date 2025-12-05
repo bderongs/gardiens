@@ -142,6 +142,13 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-4">
+                        <!-- Sélecteur d'humeur -->
+                        <div id="mood-selector" class="flex items-center gap-2">
+                            <span class="text-white text-sm font-semibold">Humeur:</span>
+                            <div id="mood-buttons" class="flex gap-1">
+                                <!-- Les boutons d'humeur seront générés par JavaScript -->
+                            </div>
+                        </div>
                         <!-- Sélecteur de pouvoir actif -->
                         <div id="active-power-selector" class="flex items-center gap-2">
                             <span class="text-white text-sm font-semibold">Pouvoir actif:</span>
@@ -177,7 +184,11 @@
                     <div class="relative bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg overflow-hidden" style="height: 500px;">
                         <div id="phaser-game" class="w-full h-full"></div>
                         <div class="absolute top-4 left-4 bg-black/50 text-white px-3 py-1 rounded text-sm">
-                            Version Phaser - Cliquez pour déplacer | Espace pour activer le pouvoir
+                            Flèches pour déplacer | Espace pour activer le pouvoir | E pour parler aux NPCs
+                        </div>
+                        <div id="api-key-warning" class="absolute top-4 right-4 bg-yellow-500/90 text-black px-3 py-2 rounded text-xs max-w-xs hidden">
+                            <p class="font-semibold mb-1">⚠️ Clé API LLM non configurée</p>
+                            <p>Les dialogues ne fonctionneront pas. Consultez README_DIALOGUE.md pour configurer.</p>
                         </div>
                     </div>
                 </div>
@@ -201,8 +212,74 @@
         </div>
     </div>
 
+    <!-- Interface de dialogue -->
+    <div id="dialogue-ui" class="hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-2xl z-50">
+        <div class="bg-white/95 backdrop-blur-lg rounded-lg p-6 border-2 border-purple-500 shadow-2xl">
+            <div class="flex items-start gap-4 mb-4">
+                <div class="flex-shrink-0">
+                    <div id="dialogue-npc-avatar" class="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center text-3xl border-2 border-purple-700">
+                        💬
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                        <h3 id="dialogue-npc-name" class="text-xl font-bold text-purple-900">Personnage</h3>
+                        <button 
+                            id="dialogue-tts-toggle"
+                            class="text-gray-500 hover:text-purple-600 transition-colors"
+                            title="Activer/Désactiver la lecture vocale"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <p id="dialogue-message" class="text-gray-800 text-lg mb-4">...</p>
+                    <div id="dialogue-choices" class="flex flex-wrap gap-2">
+                        <!-- Les choix seront générés par JavaScript -->
+                    </div>
+                </div>
+                <button 
+                    id="dialogue-close-btn"
+                    class="flex-shrink-0 text-gray-500 hover:text-gray-700 transition-colors"
+                    aria-label="Fermer"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
+    <script src="config-api.js"></script>
+    <script src="services/tts-service.js"></script>
+    <script src="services/dialogue-service.js"></script>
     <script src="script-phaser.js"></script>
+    <script>
+        // Gestion du bouton de fermeture du dialogue
+        document.getElementById('dialogue-close-btn')?.addEventListener('click', () => {
+            if (window.gameScene) {
+                window.gameScene.endDialogue();
+            }
+        });
+        
+        // Vérifier si la clé API est configurée (uniquement en développement local)
+        window.addEventListener('load', () => {
+            const isNetlify = window.location.hostname.includes('netlify.app') || 
+                             window.location.hostname.includes('netlify.com');
+            
+            // En production Netlify, pas besoin de clé API (gérée par proxy)
+            if (!isNetlify) {
+                const apiKey = localStorage.getItem('llm_api_key');
+                const warningEl = document.getElementById('api-key-warning');
+                if (!apiKey && warningEl) {
+                    warningEl.classList.remove('hidden');
+                }
+            }
+        });
+    </script>
 </body>
 </html>
 

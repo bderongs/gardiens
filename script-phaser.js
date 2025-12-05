@@ -55,6 +55,58 @@ const characters = [
     }
 ];
 
+// Émotions basées sur "La couleur des émotions" (Anna Llenas)
+const moods = [
+    {
+        id: 'joy',
+        name: 'Joie',
+        emoji: '😊',
+        color: 'yellow',
+        colorClass: 'bg-yellow-500',
+        description: 'Heureux, joyeux, plein d\'énergie positive'
+    },
+    {
+        id: 'sadness',
+        name: 'Tristesse',
+        emoji: '😢',
+        color: 'blue',
+        colorClass: 'bg-blue-500',
+        description: 'Triste, mélancolique, besoin de réconfort'
+    },
+    {
+        id: 'anger',
+        name: 'Colère',
+        emoji: '😠',
+        color: 'red',
+        colorClass: 'bg-red-500',
+        description: 'En colère, frustré, agacé'
+    },
+    {
+        id: 'fear',
+        name: 'Peur',
+        emoji: '😨',
+        color: 'black',
+        colorClass: 'bg-gray-800',
+        description: 'Peur, anxiété, inquiétude'
+    },
+    {
+        id: 'calm',
+        name: 'Calme',
+        emoji: '😌',
+        color: 'green',
+        colorClass: 'bg-green-500',
+        description: 'Calme, serein, apaisé'
+    },
+    {
+        id: 'love',
+        name: 'Amour',
+        emoji: '🥰',
+        color: 'pink',
+        colorClass: 'bg-pink-500',
+        description: 'Amoureux, tendre, affectueux'
+    }
+];
+
 // Données des pouvoirs disponibles (basés sur les talents officiels de Gardiens des cités perdues)
 const powers = [
     {
@@ -223,6 +275,55 @@ const powers = [
 const SPRITE_LAYERS_ORDER = ['body', 'bottom', 'clothes', 'hair'];
 const LPC_COLUMNS = 13;
 
+// Sprites disponibles (basés sur les fichiers réels)
+const availableSprites = {
+    body: {
+        female: [
+            { path: 'sprites/body/female_light.png', name: 'Clair' }
+        ],
+        male: [
+            { path: 'sprites/body/male_light.png', name: 'Clair' },
+            { path: 'sprites/body/male_tanned.png', name: 'Bronzé' },
+            { path: 'sprites/body/male_dark.png', name: 'Foncé' }
+        ]
+    },
+    hair: {
+        female: [
+            { path: 'sprites/hair/female_long_blonde.png', name: 'Long Blond' },
+            { path: 'sprites/hair/female_long_brunette.png', name: 'Long Brun' }
+        ],
+        male: [
+            { path: 'sprites/hair/male_short_blonde.png', name: 'Court Blond' },
+            { path: 'sprites/hair/male_short_brunette.png', name: 'Court Brun' },
+            { path: 'sprites/hair/male_short_redhead.png', name: 'Court Roux' },
+            { path: 'sprites/hair/male_messy_blonde.png', name: 'Ébouriffé Blond' }
+        ]
+    },
+    clothes: {
+        female: [
+            { path: 'sprites/clothes/female_dress.png', name: 'Robe Classique', type: 'dress' }
+        ],
+        male: [
+            { path: 'sprites/clothes/male_shirt_white.png', name: 'Chemise Blanche' }
+        ]
+    },
+    bottom: {
+        female: [
+            { path: null, name: 'Aucun (avec robe)', note: 'Les robes couvrent déjà les jambes' },
+            { path: 'sprites/clothes/pants/white_pants_female.png', name: 'Pantalon Blanc' },
+            { path: 'sprites/clothes/pants/teal_pants_female.png', name: 'Pantalon Turquoise' },
+            { path: 'sprites/clothes/pants/red_pants_female.png', name: 'Pantalon Rouge' },
+            { path: 'sprites/clothes/pants/magenta_pants_female.png', name: 'Pantalon Magenta' }
+        ],
+        male: [
+            { path: 'sprites/clothes/pants/white_pants_male.png', name: 'Pantalon Blanc' },
+            { path: 'sprites/clothes/pants/teal_pants_male.png', name: 'Pantalon Turquoise' },
+            { path: 'sprites/clothes/pants/red_pants_male.png', name: 'Pantalon Rouge' },
+            { path: 'sprites/clothes/pants/magenta_pants_male.png', name: 'Pantalon Magenta' }
+        ]
+    }
+};
+
 // État du jeu
 let gameState = {
     selectedCharacter: null,
@@ -236,17 +337,22 @@ let gameState = {
         bodySprite: null,
         hairSprite: null,
         clothesSprite: null,
-        bottomSprite: null
+        bottomSprite: null,
+        bottomSpriteIndex: null
     },
     npcs: [],
     lastMoveTime: null,
-    lastDirection: 'south'
+    lastDirection: 'south',
+    currentMood: 'calm' // Humeur actuelle du personnage (basée sur "La couleur des émotions")
 };
 
 // Instance Phaser
 let phaserGame = null;
 let gameScene = null;
 let phaserBootstrapData = null;
+
+// Exposer gameScene globalement pour l'interface de dialogue
+window.gameScene = null;
 
 // Éléments DOM
 const screens = {
@@ -272,6 +378,16 @@ function initializeEventListeners() {
         screens.characterSelection.classList.add('animate-fade-in-up');
     });
     
+    document.getElementById('confirm-customization-btn').addEventListener('click', () => {
+        hideAllScreens();
+        screens.game.classList.remove('hidden');
+        screens.game.classList.add('animate-fade-in-up');
+        setTimeout(() => {
+            renderPowers();
+            initializePhaserGame().catch(err => console.error('Erreur Phaser:', err));
+        }, 100);
+    });
+    
     document.getElementById('restart-btn').addEventListener('click', async () => {
         if (phaserGame) {
             phaserGame.destroy(true);
@@ -289,7 +405,8 @@ function initializeEventListeners() {
                 bodySprite: null,
                 hairSprite: null,
                 clothesSprite: null,
-                bottomSprite: null
+                bottomSprite: null,
+                bottomSpriteIndex: null
             },
             npcs: [],
             lastMoveTime: null,
@@ -334,19 +451,292 @@ function renderCharacters() {
             gameState.selectedCharacter = character;
             gameState.selectedCharacterId = character.id;
             setTimeout(() => {
-                hideAllScreens();
-                screens.game.classList.remove('hidden');
-                screens.game.classList.add('animate-fade-in-up');
-                // Attendre que le DOM soit mis à jour avant de rendre les pouvoirs
-                setTimeout(() => {
-                    console.log('Tentative de rendu des pouvoirs après affichage de l\'écran de jeu');
-                    renderPowers(); // Afficher les pouvoirs dans l'interface de test
-                }, 100);
-                initializePhaserGame().catch(err => console.error('Erreur Phaser:', err));
+                showCustomization(character);
             }, 300);
         });
         grid.appendChild(card);
     });
+}
+
+// Afficher l'écran de personnalisation
+function showCustomization(character) {
+    gameState.selectedCharacter = character;
+    gameState.selectedCharacterId = character.id;
+    document.getElementById('customization-character-name').textContent = character.name;
+    hideAllScreens();
+    screens.customization.classList.remove('hidden');
+    screens.customization.classList.add('animate-fade-in-up');
+    renderCustomizationOptions();
+    drawCharacterPreview();
+}
+
+// Rendre les options de personnalisation avec les sprites disponibles
+function renderCustomizationOptions() {
+    const characterId = gameState.selectedCharacterId;
+    const characterConfig = characterRenderer?.charactersConfig?.[characterId];
+    const gender = characterConfig?.gender || (characterId === 'sophie' || characterId === 'biana' ? 'female' : 'male');
+    
+    // Initialiser avec la config du personnage si disponible
+    if (characterConfig && characterConfig.sprites) {
+        if (!gameState.customization.bodySprite) {
+            gameState.customization.bodySprite = characterConfig.sprites.body;
+        }
+        if (!gameState.customization.hairSprite) {
+            gameState.customization.hairSprite = characterConfig.sprites.hair;
+        }
+        if (!gameState.customization.clothesSprite) {
+            gameState.customization.clothesSprite = characterConfig.sprites.clothes;
+        }
+    }
+    
+    // Corps (body sprites)
+    const bodyContainer = document.getElementById('body-sprites');
+    if (bodyContainer) {
+        bodyContainer.innerHTML = '';
+        const bodySprites = availableSprites.body[gender] || [];
+        bodySprites.forEach(sprite => {
+            const btn = document.createElement('button');
+            btn.className = `p-3 rounded-lg border-2 transition-all bg-white/5 hover:bg-white/10 hover:scale-105 ${gameState.customization.bodySprite === sprite.path ? 'border-purple-400 bg-purple-500/30 scale-105' : 'border-transparent'}`;
+            
+            const container = document.createElement('div');
+            container.className = 'flex flex-col items-center gap-2';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            canvas.className = 'border-2 border-purple-300 rounded-lg shadow-lg';
+            const ctx = canvas.getContext('2d');
+            
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, 64, 64, 0, 0, 64, 64);
+            };
+            img.src = sprite.path;
+            
+            const label = document.createElement('span');
+            label.className = 'text-xs text-white font-medium';
+            label.textContent = sprite.name;
+            
+            container.appendChild(canvas);
+            container.appendChild(label);
+            btn.appendChild(container);
+            
+            btn.addEventListener('click', () => {
+                gameState.customization.bodySprite = sprite.path;
+                renderCustomizationOptions();
+                drawCharacterPreview();
+            });
+            bodyContainer.appendChild(btn);
+        });
+    }
+    
+    // Cheveux
+    const hairContainer = document.getElementById('hair-sprites');
+    if (hairContainer) {
+        hairContainer.innerHTML = '';
+        const hairSprites = availableSprites.hair[gender] || [];
+        const uniqueHairSprites = hairSprites.filter((sprite, index, self) => 
+            index === self.findIndex(s => s.path === sprite.path)
+        );
+        
+        uniqueHairSprites.forEach(sprite => {
+            const btn = document.createElement('button');
+            btn.className = `p-3 rounded-lg border-2 transition-all bg-white/5 hover:bg-white/10 hover:scale-105 ${gameState.customization.hairSprite === sprite.path ? 'border-purple-400 bg-purple-500/30 scale-105' : 'border-transparent'}`;
+            
+            const container = document.createElement('div');
+            container.className = 'flex flex-col items-center gap-2';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            canvas.className = 'border-2 border-purple-300 rounded-lg shadow-lg';
+            const ctx = canvas.getContext('2d');
+            
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, 64, 64, 0, 0, 64, 64);
+            };
+            img.src = sprite.path;
+            
+            const label = document.createElement('span');
+            label.className = 'text-xs text-white font-medium';
+            label.textContent = sprite.name;
+            
+            container.appendChild(canvas);
+            container.appendChild(label);
+            btn.appendChild(container);
+            
+            btn.addEventListener('click', () => {
+                gameState.customization.hairSprite = sprite.path;
+                renderCustomizationOptions();
+                drawCharacterPreview();
+            });
+            hairContainer.appendChild(btn);
+        });
+    }
+    
+    // Vêtements (Haut/Robes)
+    const clothesContainer = document.getElementById('clothes-sprites');
+    if (clothesContainer) {
+        clothesContainer.innerHTML = '';
+        const clothesSprites = availableSprites.clothes[gender] || [];
+        clothesSprites.forEach(sprite => {
+            const btn = document.createElement('button');
+            btn.className = `p-3 rounded-lg border-2 transition-all bg-white/5 hover:bg-white/10 hover:scale-105 ${gameState.customization.clothesSprite === sprite.path ? 'border-purple-400 bg-purple-500/30 scale-105' : 'border-transparent'}`;
+            
+            const container = document.createElement('div');
+            container.className = 'flex flex-col items-center gap-2';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            canvas.className = 'border-2 border-purple-300 rounded-lg shadow-lg';
+            const ctx = canvas.getContext('2d');
+            
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, 64, 64, 0, 0, 64, 64);
+            };
+            img.src = sprite.path;
+            
+            const label = document.createElement('span');
+            label.className = 'text-xs text-white font-medium text-center';
+            label.textContent = sprite.name;
+            
+            container.appendChild(canvas);
+            container.appendChild(label);
+            btn.appendChild(container);
+            
+            btn.addEventListener('click', () => {
+                gameState.customization.clothesSprite = sprite.path;
+                if (sprite.type === 'dress' && gameState.customization.bottomSprite) {
+                    // Optionnel : réinitialiser le pantalon si une robe est sélectionnée
+                }
+                renderCustomizationOptions();
+                drawCharacterPreview();
+            });
+            clothesContainer.appendChild(btn);
+        });
+    }
+    
+    // Bas/Pantalons
+    const bottomContainer = document.getElementById('bottom-sprites');
+    if (bottomContainer) {
+        bottomContainer.innerHTML = '';
+        const bottomSprites = availableSprites.bottom[gender] || [];
+        
+        bottomSprites.forEach((sprite, index) => {
+            const btn = document.createElement('button');
+            const isSelected = gameState.customization.bottomSpriteIndex === index;
+            const hasSprite = sprite.path !== null && sprite.path !== undefined;
+            
+            btn.className = `p-3 rounded-lg border-2 transition-all hover:scale-105 ${hasSprite ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-800/50'} ${isSelected ? 'border-purple-400 bg-purple-500/30 scale-105' : 'border-transparent'}`;
+            btn.dataset.spriteIndex = index;
+            if (!hasSprite) {
+                btn.title = sprite.note || 'Aucun pantalon';
+            }
+            
+            const container = document.createElement('div');
+            container.className = 'flex flex-col items-center gap-2';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            canvas.className = `border-2 border-purple-300 rounded-lg shadow-lg ${!hasSprite ? 'opacity-30' : ''}`;
+            const ctx = canvas.getContext('2d');
+            
+            if (hasSprite) {
+                const img = new Image();
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0, 64, 64, 0, 0, 64, 64);
+                };
+                img.onerror = () => {
+                    ctx.fillStyle = '#666';
+                    ctx.fillRect(0, 0, 64, 64);
+                    ctx.fillStyle = '#999';
+                    ctx.font = '8px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Erreur', 32, 32);
+                };
+                img.src = sprite.path;
+            } else {
+                ctx.fillStyle = '#444';
+                ctx.fillRect(0, 0, 64, 64);
+                ctx.fillStyle = '#888';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Aucun', 32, 32);
+            }
+            
+            const label = document.createElement('span');
+            label.className = 'text-xs text-white font-medium text-center';
+            label.textContent = sprite.name;
+            if (sprite.note) {
+                label.title = sprite.note;
+            }
+            
+            container.appendChild(canvas);
+            container.appendChild(label);
+            btn.appendChild(container);
+            
+            btn.addEventListener('click', () => {
+                gameState.customization.bottomSprite = sprite.path || null;
+                gameState.customization.bottomSpriteIndex = index;
+                renderCustomizationOptions();
+                drawCharacterPreview();
+            });
+            
+            bottomContainer.appendChild(btn);
+        });
+    }
+}
+
+// Fonction pour dessiner l'aperçu du personnage
+async function drawCharacterPreview() {
+    const canvas = document.getElementById('character-canvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    try {
+        // Effacer le canvas avec un fond dégradé
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#e0f2fe');
+        gradient.addColorStop(1, '#bae6fd');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const scale = 3;
+        
+        const characterId = gameState.selectedCharacterId || gameState.selectedCharacter?.id;
+        if (characterRenderer) {
+            await characterRenderer.waitForConfig();
+            await characterRenderer.drawCharacter(
+                ctx, 
+                centerX - 32 * scale / 2,
+                centerY - 32 * scale / 2,
+                gameState.customization, 
+                scale,
+                characterId
+            );
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des sprites:', error);
+        
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#e0f2fe');
+        gradient.addColorStop(1, '#bae6fd');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = '#666';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Chargement des sprites...', canvas.width / 2, canvas.height / 2);
+        ctx.fillText('Vérifiez la console pour les erreurs', canvas.width / 2, canvas.height / 2 + 25);
+    }
 }
 
 // Rendre les pouvoirs pour le test
@@ -661,6 +1051,7 @@ class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
         gameScene = this;
+        window.gameScene = this; // Exposer globalement pour l'interface de dialogue
         this.bootstrap = phaserBootstrapData || { spriteAssets: { uniquePaths: [] }, mapData: null };
         phaserBootstrapData = null;
         this.spriteAssets = this.bootstrap.spriteAssets || { uniquePaths: [] };
@@ -728,9 +1119,63 @@ class GameScene extends Phaser.Scene {
         // Gestion de la barre d'espace pour activer les pouvoirs
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         
+        // Gestion de la touche E pour interagir avec les NPCs
+        this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+        
+        // Vérifier que la touche E est bien capturée
+        console.log('Touche E initialisée:', this.interactKey ? 'Oui' : 'Non');
+        
+        // Alternative : écouter aussi les événements clavier globaux pour la touche E
+        this.input.keyboard.on('keydown-E', () => {
+            console.log('Touche E détectée via événement Phaser');
+        });
+        
         this.initializeNPCs(mapWidth, mapHeight, tileSize);
         this.updateUI();
         this.updatePowerEffects();
+        
+        // Initialiser le service de dialogue
+        if (window.DialogueService) {
+            this.dialogueService = new DialogueService();
+            
+            // En production sur Netlify, la clé API est gérée par la fonction proxy
+            // En développement local, charger depuis localStorage
+            const isNetlify = window.location.hostname.includes('netlify.app') || 
+                             window.location.hostname.includes('netlify.com');
+            
+            if (isNetlify) {
+                console.log('✅ Service de dialogue initialisé (mode production Netlify - clé API gérée par proxy)');
+            } else {
+                // Mode développement local : charger la clé depuis localStorage
+                const apiKey = localStorage.getItem('llm_api_key');
+                if (apiKey) {
+                    this.dialogueService.setApiKey(apiKey);
+                    console.log('✅ Service de dialogue initialisé avec OpenAI (gpt-4o-mini) - mode développement');
+                } else {
+                    console.warn('⚠️ Clé API LLM non définie. Les dialogues ne fonctionneront pas. Configurez votre clé dans config-api.js ou via localStorage.setItem("llm_api_key", "votre_cle")');
+                }
+            }
+        }
+        
+        // État du dialogue
+        this.isDialogueActive = false;
+        this.currentDialogueNPC = null;
+        this.conversationHistory = [];
+        this.nearestNPCForInteraction = null; // NPC le plus proche pour l'interaction
+        this.ttsService = null; // Service de synthèse vocale
+        
+        // Fallback : écouter les événements clavier globaux pour la touche E
+        // (au cas où Phaser ne capture pas correctement la touche)
+        this.eKeyListener = (event) => {
+            if (event.key === 'e' || event.key === 'E') {
+                if (this.nearestNPCForInteraction && !this.isDialogueActive) {
+                    console.log('✅ Touche E détectée (fallback), démarrage du dialogue');
+                    event.preventDefault();
+                    this.startDialogue(this.nearestNPCForInteraction);
+                }
+            }
+        };
+        window.addEventListener('keydown', this.eKeyListener);
     }
     
     createMapVisualization(mapWidth, mapHeight, tileSize) {
@@ -955,8 +1400,11 @@ class GameScene extends Phaser.Scene {
         
         this.updateNPCs();
         
+        // Détection de proximité pour les dialogues (doit être après updateNPCs)
+        this.checkNPCProximity();
+        
         // Gestion de la barre d'espace pour activer les pouvoirs
-        if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+        if (this.spaceKey && Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
             this.activateActivePower();
         }
     }
@@ -2232,6 +2680,525 @@ class GameScene extends Phaser.Scene {
         const powersEl = document.getElementById('game-character-powers');
         if (powersEl) {
             powersEl.textContent = gameState.selectedPowers.map(p => p.name).join(', ') || 'Aucun pouvoir';
+        }
+        
+        // Initialiser le sélecteur d'humeur si ce n'est pas déjà fait
+        this.initializeMoodSelector();
+    }
+    
+    /**
+     * Initialise le sélecteur d'humeur basé sur "La couleur des émotions"
+     */
+    initializeMoodSelector() {
+        const moodButtonsContainer = document.getElementById('mood-buttons');
+        if (!moodButtonsContainer || moodButtonsContainer.dataset.initialized === 'true') return;
+        
+        moodButtonsContainer.innerHTML = '';
+        
+        moods.forEach(mood => {
+            const button = document.createElement('button');
+            const isActive = gameState.currentMood === mood.id;
+            button.className = `mood-btn ${mood.colorClass} ${isActive ? 'ring-2 ring-white ring-offset-2' : ''} text-white font-semibold py-1 px-2 rounded transition-all transform hover:scale-110 text-sm flex items-center gap-1`;
+            button.title = mood.description;
+            button.innerHTML = `<span>${mood.emoji}</span><span class="hidden sm:inline">${mood.name}</span>`;
+            
+            button.addEventListener('click', () => {
+                gameState.currentMood = mood.id;
+                this.updateMoodSelector();
+                console.log(`Humeur changée: ${mood.name}`);
+            });
+            
+            moodButtonsContainer.appendChild(button);
+        });
+        
+        moodButtonsContainer.dataset.initialized = 'true';
+    }
+    
+    /**
+     * Met à jour l'affichage du sélecteur d'humeur
+     */
+    updateMoodSelector() {
+        const moodButtons = document.querySelectorAll('.mood-btn');
+        moodButtons.forEach((button, index) => {
+            const mood = moods[index];
+            if (mood && gameState.currentMood === mood.id) {
+                button.classList.add('ring-2', 'ring-white', 'ring-offset-2');
+            } else {
+                button.classList.remove('ring-2', 'ring-white', 'ring-offset-2');
+            }
+        });
+    }
+    
+    /**
+     * Vérifie la proximité des NPCs pour initier des dialogues
+     */
+    checkNPCProximity() {
+        // Vérifier si le service de dialogue est disponible (même sans clé API, on peut afficher l'indicateur)
+        if (this.isDialogueActive) return;
+        
+        // Distance d'interaction en cases (2 cases = distance de 2)
+        const interactionDistanceInTiles = 2;
+        const playerGridX = this.player.x / this.tilePixelSize;
+        const playerGridY = this.player.y / this.tilePixelSize;
+        
+        let nearestNPC = null;
+        let nearestDistance = Infinity;
+        
+        if (!this.npcs || this.npcs.length === 0) return;
+        
+        this.npcs.forEach(npc => {
+            if (!npc || !npc.container) return;
+            
+            const npcGridX = npc.container.x / this.tilePixelSize;
+            const npcGridY = npc.container.y / this.tilePixelSize;
+            
+            const distance = Math.sqrt(
+                Math.pow(npcGridX - playerGridX, 2) + 
+                Math.pow(npcGridY - playerGridY, 2)
+            );
+            
+            // Trouver le NPC le plus proche (distance en cases)
+            if (distance < interactionDistanceInTiles && distance < nearestDistance) {
+                nearestNPC = npc;
+                nearestDistance = distance;
+            }
+            
+            // Retirer l'indicateur visuel si le NPC est trop loin
+            if (distance >= interactionDistanceInTiles && npc.interactionIndicator) {
+                npc.interactionIndicator.destroy();
+                npc.interactionIndicator = null;
+            }
+        });
+        
+        // Afficher un indicateur visuel sur le NPC le plus proche
+        if (nearestNPC && !nearestNPC.interactionIndicator) {
+            const indicator = this.add.text(
+                nearestNPC.container.x,
+                nearestNPC.container.y - 50,
+                'Appuyez sur E pour parler',
+                {
+                    fontSize: '12px',
+                    fill: '#ffff00',
+                    backgroundColor: '#000000',
+                    padding: { x: 6, y: 3 },
+                    fontStyle: 'bold'
+                }
+            ).setOrigin(0.5, 0.5);
+            indicator.setDepth(nearestNPC.container.y + 1000);
+            nearestNPC.interactionIndicator = indicator;
+        }
+        
+        // Mettre à jour la position de l'indicateur
+        if (nearestNPC && nearestNPC.interactionIndicator) {
+            nearestNPC.interactionIndicator.x = nearestNPC.container.x;
+            nearestNPC.interactionIndicator.y = nearestNPC.container.y - 50;
+        }
+        
+        // Stocker le NPC le plus proche pour l'interaction (utilisé par le fallback)
+        this.nearestNPCForInteraction = nearestNPC;
+        
+        // Vérifier la touche E (séparément pour éviter les problèmes de timing)
+        // Utiliser plusieurs méthodes pour s'assurer que la touche est détectée
+        if (this.interactKey) {
+            const eKeyPressed = Phaser.Input.Keyboard.JustDown(this.interactKey);
+            
+            if (eKeyPressed && nearestNPC && !this.isDialogueActive) {
+                console.log('✅ Touche E pressée (Phaser), démarrage du dialogue avec', nearestNPC.character?.name);
+                this.startDialogue(nearestNPC);
+                if (nearestNPC.interactionIndicator) {
+                    nearestNPC.interactionIndicator.destroy();
+                    nearestNPC.interactionIndicator = null;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Démarre un dialogue avec un NPC
+     */
+    async startDialogue(npc) {
+        if (this.isDialogueActive) return;
+        
+        console.log('Démarrage du dialogue avec', npc.character?.name);
+        
+        // Vérifier si le service de dialogue est disponible
+        if (!this.dialogueService) {
+            console.warn('Service de dialogue non disponible. Vérifiez que la clé API est configurée.');
+            // Afficher quand même l'interface avec un message d'erreur
+        }
+        
+        this.isDialogueActive = true;
+        this.currentDialogueNPC = npc;
+        this.conversationHistory = [];
+        this.discussedTopics = []; // Sujets déjà abordés pour éviter les répétitions
+        
+        // Afficher l'interface de dialogue
+        const dialogueUI = document.getElementById('dialogue-ui');
+        if (dialogueUI) {
+            dialogueUI.classList.remove('hidden');
+        }
+        
+        // Afficher le nom du NPC
+        const npcNameEl = document.getElementById('dialogue-npc-name');
+        if (npcNameEl && npc.character) {
+            npcNameEl.textContent = npc.character.name;
+        }
+        
+        // Afficher l'avatar du NPC (emoji)
+        const npcAvatarEl = document.getElementById('dialogue-npc-avatar');
+        if (npcAvatarEl && npc.character) {
+            const characterData = characters.find(c => c.id === npc.character.id);
+            if (characterData) {
+                npcAvatarEl.innerHTML = characterData.image;
+                npcAvatarEl.className = `w-16 h-16 ${characterData.colorClass} rounded-full flex items-center justify-center text-3xl border-2 border-purple-700`;
+            }
+        }
+        
+        // Initialiser le service TTS si disponible
+        if (!this.ttsService && window.TTSService) {
+            this.ttsService = new TTSService();
+            if (!this.ttsService.isAvailable()) {
+                console.warn('TTS non disponible dans ce navigateur');
+            }
+        }
+        
+        // Initialiser le bouton TTS (une seule fois)
+        const ttsToggleBtn = document.getElementById('dialogue-tts-toggle');
+        if (ttsToggleBtn && this.ttsService && !ttsToggleBtn.dataset.initialized) {
+            ttsToggleBtn.dataset.initialized = 'true';
+            // Mettre à jour l'apparence selon l'état actuel
+            if (this.ttsService.isEnabled) {
+                ttsToggleBtn.classList.add('text-purple-600');
+                ttsToggleBtn.classList.remove('text-gray-500');
+            } else {
+                ttsToggleBtn.classList.add('text-gray-500');
+                ttsToggleBtn.classList.remove('text-purple-600');
+            }
+            
+            ttsToggleBtn.addEventListener('click', () => {
+                const isEnabled = !this.ttsService.isEnabled;
+                this.ttsService.setEnabled(isEnabled);
+                ttsToggleBtn.classList.toggle('text-purple-600', isEnabled);
+                ttsToggleBtn.classList.toggle('text-gray-500', !isEnabled);
+            });
+        }
+        
+        // Afficher un message de chargement
+        const dialogueMessageEl = document.getElementById('dialogue-message');
+        const dialogueChoicesEl = document.getElementById('dialogue-choices');
+        if (dialogueMessageEl) {
+            dialogueMessageEl.textContent = '...';
+        }
+        if (dialogueChoicesEl) {
+            dialogueChoicesEl.innerHTML = '';
+        }
+        
+        // Si le service de dialogue n'est pas disponible, afficher un message d'erreur
+        if (!this.dialogueService) {
+            if (dialogueMessageEl) {
+                dialogueMessageEl.textContent = "Salut ! Comment ça va ? (Service de dialogue non configuré)";
+            }
+            if (dialogueChoicesEl) {
+                dialogueChoicesEl.innerHTML = `
+                    <button class="dialogue-choice-btn bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-all transform hover:scale-105 text-sm">
+                        Répondre amicalement
+                    </button>
+                    <button class="dialogue-choice-btn bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-all transform hover:scale-105 text-sm ml-2" onclick="window.gameScene?.endDialogue()">
+                        Fermer
+                    </button>
+                `;
+            }
+            return;
+        }
+        
+        try {
+            // Générer le dialogue initial avec l'humeur du joueur et les sujets déjà abordés
+            const dialogue = await this.dialogueService.generateInitialDialogue(
+                npc.character.id,
+                gameState.selectedCharacterId,
+                gameState.currentMood,
+                this.discussedTopics
+            );
+            
+            // Afficher le message du NPC
+            if (dialogueMessageEl) {
+                dialogueMessageEl.textContent = dialogue.message;
+            }
+            
+            // Lire le message à voix haute
+            if (this.ttsService && this.ttsService.isEnabled) {
+                this.ttsService.speak(dialogue.message, npc.character.id, {
+                    onEnd: () => {
+                        console.log('Lecture terminée');
+                    },
+                    onError: (error) => {
+                        console.error('Erreur lors de la lecture:', error);
+                    }
+                });
+            }
+            
+            // Ajouter à l'historique
+            this.conversationHistory.push({
+                speaker: npc.character.name,
+                message: dialogue.message
+            });
+            
+            // Extraire les sujets abordés dans le message initial
+            this.extractTopicsFromMessage(dialogue.message, npc.character.id);
+            
+            // Afficher les choix
+            if (dialogueChoicesEl && dialogue.choices) {
+                dialogueChoicesEl.innerHTML = '';
+                dialogue.choices.forEach((choice, index) => {
+                    const button = document.createElement('button');
+                    button.className = 'dialogue-choice-btn bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-all transform hover:scale-105 text-sm';
+                    button.textContent = choice.text;
+                    button.addEventListener('click', () => {
+                        this.handleDialogueChoice(choice);
+                    });
+                    dialogueChoicesEl.appendChild(button);
+                });
+            }
+        } catch (error) {
+            console.error('Erreur lors de la génération du dialogue:', error);
+            if (dialogueMessageEl) {
+                dialogueMessageEl.textContent = "Salut ! Comment ça va ?";
+            }
+        }
+    }
+    
+    /**
+     * Gère le choix du joueur dans le dialogue
+     */
+    async handleDialogueChoice(choice) {
+        if (!this.currentDialogueNPC || !this.dialogueService) return;
+        
+        const dialogueMessageEl = document.getElementById('dialogue-message');
+        const dialogueChoicesEl = document.getElementById('dialogue-choices');
+        
+        // Afficher le choix du joueur
+        if (dialogueMessageEl) {
+            dialogueMessageEl.textContent = `Vous: ${choice.text}`;
+        }
+        
+        // Ajouter à l'historique
+        this.conversationHistory.push({
+            speaker: gameState.selectedCharacter?.name || 'Vous',
+            message: choice.text
+        });
+        
+        // Désactiver les boutons
+        if (dialogueChoicesEl) {
+            dialogueChoicesEl.innerHTML = '<p class="text-purple-200 text-sm">Le personnage réfléchit...</p>';
+        }
+        
+        try {
+            // Générer la réponse du NPC avec de nouveaux choix contextualisés (incluant l'humeur et les sujets abordés)
+            const response = await this.dialogueService.generateNPCResponse(
+                this.currentDialogueNPC.character.id,
+                gameState.selectedCharacterId,
+                choice,
+                this.conversationHistory,
+                gameState.currentMood,
+                this.discussedTopics
+            );
+            
+            // La réponse peut être une string (ancien format) ou un objet avec message et choices
+            const npcResponse = typeof response === 'string' ? response : response.message;
+            const newChoices = typeof response === 'object' && response.choices ? response.choices : null;
+            
+            // Extraire et ajouter les sujets abordés dans le message du NPC
+            this.extractTopicsFromMessage(npcResponse, this.currentDialogueNPC.character.id);
+            
+            // Afficher la réponse
+            if (dialogueMessageEl) {
+                dialogueMessageEl.textContent = npcResponse;
+            }
+            
+            // Lire la réponse à voix haute
+            if (this.ttsService && this.ttsService.isEnabled && this.currentDialogueNPC) {
+                this.ttsService.speak(npcResponse, this.currentDialogueNPC.character.id, {
+                    onEnd: () => {
+                        console.log('Lecture terminée');
+                    },
+                    onError: (error) => {
+                        console.error('Erreur lors de la lecture:', error);
+                    }
+                });
+            }
+            
+            // Ajouter à l'historique
+            this.conversationHistory.push({
+                speaker: this.currentDialogueNPC.character.name,
+                message: npcResponse
+            });
+            
+            // Afficher les nouveaux choix contextualisés
+            if (dialogueChoicesEl) {
+                if (newChoices && newChoices.length > 0) {
+                    // Afficher les choix générés dynamiquement
+                    dialogueChoicesEl.innerHTML = '';
+                    newChoices.forEach((newChoice) => {
+                        const button = document.createElement('button');
+                        button.className = 'dialogue-choice-btn bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-all transform hover:scale-105 text-sm';
+                        button.textContent = newChoice.text;
+                        button.addEventListener('click', () => {
+                            this.handleDialogueChoice(newChoice);
+                        });
+                        dialogueChoicesEl.appendChild(button);
+                    });
+                    
+                    // Ajouter un bouton pour terminer la conversation
+                    const endBtn = document.createElement('button');
+                    endBtn.className = 'dialogue-choice-btn bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-all transform hover:scale-105 text-sm ml-2';
+                    endBtn.textContent = 'Terminer la conversation';
+                    endBtn.addEventListener('click', () => {
+                        this.endDialogue();
+                    });
+                    dialogueChoicesEl.appendChild(endBtn);
+                } else {
+                    // Fallback : proposer de continuer ou fermer
+                    dialogueChoicesEl.innerHTML = `
+                        <button class="dialogue-choice-btn bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-all transform hover:scale-105 text-sm">
+                            Continuer à parler
+                        </button>
+                        <button class="dialogue-choice-btn bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-all transform hover:scale-105 text-sm ml-2">
+                            Terminer la conversation
+                        </button>
+                    `;
+                    
+                    const continueBtn = dialogueChoicesEl.querySelector('button:first-child');
+                    const endBtn = dialogueChoicesEl.querySelector('button:last-child');
+                    
+                    continueBtn.addEventListener('click', () => {
+                        this.continueDialogue();
+                    });
+                    
+                    endBtn.addEventListener('click', () => {
+                        this.endDialogue();
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Erreur lors de la génération de la réponse:', error);
+            if (dialogueMessageEl) {
+                dialogueMessageEl.textContent = "D'accord, je comprends.";
+            }
+        }
+    }
+    
+    /**
+     * Continue le dialogue avec de nouveaux choix contextualisés
+     */
+    async continueDialogue() {
+        if (!this.currentDialogueNPC || !this.dialogueService) return;
+        
+        const dialogueChoicesEl = document.getElementById('dialogue-choices');
+        const dialogueMessageEl = document.getElementById('dialogue-message');
+        
+        if (dialogueChoicesEl) {
+            dialogueChoicesEl.innerHTML = '<p class="text-purple-200 text-sm">Génération de nouveaux choix...</p>';
+        }
+        
+        try {
+            // Récupérer le dernier message du NPC pour générer des choix contextualisés
+            const lastNPCMessage = this.conversationHistory
+                .filter(h => h.speaker === this.currentDialogueNPC.character.name)
+                .pop()?.message || "Comment ça va ?";
+            
+            // Générer de nouveaux choix basés sur le dernier message, l'humeur du joueur et les sujets déjà abordés
+            const choices = await this.dialogueService.generateContextualChoices(
+                lastNPCMessage,
+                this.currentDialogueNPC.character.id,
+                gameState.selectedCharacterId,
+                gameState.currentMood
+            );
+            
+            if (dialogueChoicesEl) {
+                dialogueChoicesEl.innerHTML = '';
+                choices.forEach(choice => {
+                    const button = document.createElement('button');
+                    button.className = 'dialogue-choice-btn bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-all transform hover:scale-105 text-sm';
+                    button.textContent = choice.text;
+                    button.addEventListener('click', () => {
+                        this.handleDialogueChoice(choice);
+                    });
+                    dialogueChoicesEl.appendChild(button);
+                });
+                
+                // Ajouter un bouton pour terminer
+                const endBtn = document.createElement('button');
+                endBtn.className = 'dialogue-choice-btn bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-all transform hover:scale-105 text-sm ml-2';
+                endBtn.textContent = 'Terminer la conversation';
+                endBtn.addEventListener('click', () => {
+                    this.endDialogue();
+                });
+                dialogueChoicesEl.appendChild(endBtn);
+            }
+        } catch (error) {
+            console.error('Erreur lors de la génération des choix:', error);
+            // Fallback avec des choix génériques
+            if (dialogueChoicesEl) {
+                const fallbackChoices = [
+                    { text: "Répondre amicalement", tone: "friendly" },
+                    { text: "Répondre avec humour", tone: "funny" },
+                    { text: "Répondre brièvement", tone: "brief" }
+                ];
+                dialogueChoicesEl.innerHTML = '';
+                fallbackChoices.forEach(choice => {
+                    const button = document.createElement('button');
+                    button.className = 'dialogue-choice-btn bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-all transform hover:scale-105 text-sm';
+                    button.textContent = choice.text;
+                    button.addEventListener('click', () => {
+                        this.handleDialogueChoice(choice);
+                    });
+                    dialogueChoicesEl.appendChild(button);
+                });
+            }
+        }
+    }
+    
+    /**
+     * Extrait les sujets abordés d'un message pour éviter les répétitions
+     */
+    extractTopicsFromMessage(message, characterId) {
+        if (!message || !characterId) return;
+        
+        const npc = this.dialogueService?.characterPersonalities[characterId];
+        if (!npc) return;
+        
+        // Vérifier si le message mentionne un des sujets favoris du personnage
+        const messageLower = message.toLowerCase();
+        npc.topics.forEach(topic => {
+            const topicLower = topic.toLowerCase();
+            if (messageLower.includes(topicLower) && !this.discussedTopics.includes(topic)) {
+                this.discussedTopics.push(topic);
+            }
+        });
+        
+        // Limiter à 10 sujets pour éviter que la liste devienne trop longue
+        if (this.discussedTopics.length > 10) {
+            this.discussedTopics = this.discussedTopics.slice(-10);
+        }
+    }
+    
+    /**
+     * Termine le dialogue
+     */
+    endDialogue() {
+        // Arrêter la lecture TTS en cours
+        if (this.ttsService) {
+            this.ttsService.stop();
+        }
+        
+        this.isDialogueActive = false;
+        this.currentDialogueNPC = null;
+        this.conversationHistory = [];
+        this.discussedTopics = []; // Réinitialiser les sujets abordés
+        
+        const dialogueUI = document.getElementById('dialogue-ui');
+        if (dialogueUI) {
+            dialogueUI.classList.add('hidden');
         }
     }
 }

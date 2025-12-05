@@ -2,6 +2,8 @@
 [build]
   # Pas de build nécessaire, c'est un site statique
   publish = "."
+  # Fonctions Netlify pour le proxy API
+  functions = "netlify/functions"
 
 [[redirects]]
   # Rediriger toutes les routes vers index-phaser.html (pour le SPA)
@@ -29,4 +31,5 @@
   for = "/*.css"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
 

@@ -12,4 +12,6 @@ npm-debug.log*
 # Fichiers de configuration locaux
 .env
 .env.local
+config-api.js
+
 

@@ -1,0 +1,27 @@
+/**
+ * Configuration de la clé API pour le système de dialogue
+ * Ce fichier permet de configurer facilement votre clé API OpenAI ou Groq
+ * 
+ * ⚠️ SÉCURITÉ : Ne commitez jamais ce fichier avec votre clé API dans un dépôt public !
+ * Ajoutez config-api.js au .gitignore pour protéger votre clé API.
+ * 
+ * INSTRUCTIONS :
+ * 1. Copiez ce fichier : cp config-api.js.example config-api.js
+ * 2. Éditez config-api.js et remplacez 'VOTRE_CLE_API_ICI' par votre vraie clé API
+ */
+
+// Remplacez cette valeur par votre clé API OpenAI
+// Note: GPT-5 n'existe pas encore, le système utilise gpt-4o-mini (le plus récent et économique)
+const OPENAI_API_KEY = 'VOTRE_CLE_API_ICI';
+
+// Configuration automatique au chargement de la page
+if (typeof window !== 'undefined') {
+    // Stocker la clé API dans localStorage
+    if (OPENAI_API_KEY && OPENAI_API_KEY.startsWith('sk-')) {
+        localStorage.setItem('llm_api_key', OPENAI_API_KEY);
+        console.log('✅ Clé API OpenAI configurée avec succès (gpt-4o-mini)');
+    } else {
+        console.warn('⚠️ Clé API non valide. Assurez-vous que votre clé commence par "sk-"');
+    }
+}
+
