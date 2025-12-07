@@ -967,7 +967,10 @@ async function loadMapForPhaser() {
     const mapLoader = new TopDownTilemap();
     try {
         console.log('loadMapForPhaser: Chargement de village.tmx...');
-        const loaded = await mapLoader.loadFromTMX('village.tmx');
+        const mapFileName = 'village.tmx';
+        const loaded = await mapLoader.loadFromTMX(mapFileName);
+        // Stocker le chemin de la carte pour le système de transitions
+        mapLoader.tmxPath = mapFileName;
         console.log('loadMapForPhaser: Résultat du chargement:', loaded);
 
         if (!loaded) {
@@ -1054,6 +1057,11 @@ class GameScene extends Phaser.Scene {
         this.spriteAssets = this.bootstrap.spriteAssets || { uniquePaths: [] };
         this.createdAnimations = new Set();
         this.mapData = this.bootstrap.mapData || null;
+
+        // Initialiser le système de transitions
+        if (typeof MapTransitionMixin !== 'undefined') {
+            this.initTransitions();
+        }
         this.tilePixelSize = this.mapData?.tileSize || 32;
         this.powerEffects = []; // Liste des effets actifs
         this.powerParticles = []; // Particules des pouvoirs
@@ -1173,6 +1181,17 @@ class GameScene extends Phaser.Scene {
             }
         };
         window.addEventListener('keydown', this.eKeyListener);
+
+        // Charger les transitions après le chargement de la carte
+        if (this.mapData?.tilemap && typeof loadTransitionsFromTMX !== 'undefined') {
+            console.log('🔄 Chargement des transitions au démarrage...');
+            loadTransitionsFromTMX(this.mapData.tilemap).then(transitions => {
+                this.transitions = transitions;
+                console.log(`✅ ${transitions.length} transition(s) chargée(s) au démarrage`);
+            }).catch(error => {
+                console.error('❌ Erreur lors du chargement des transitions:', error);
+            });
+        }
     }
 
     createMapVisualization(mapWidth, mapHeight, tileSize) {
@@ -1289,6 +1308,11 @@ class GameScene extends Phaser.Scene {
     }
 
     update() {
+        // Vérifier les transitions (si le système est disponible)
+        if (typeof MapTransitionMixin !== 'undefined' && this.checkTransitions) {
+            this.checkTransitions();
+        }
+
         const tileSize = this.tilePixelSize;
         const mapWidth = this.mapData?.width || 30;
         const mapHeight = this.mapData?.height || 30;
@@ -3152,4 +3176,12 @@ class GameScene extends Phaser.Scene {
             dialogueUI.classList.add('hidden');
         }
     }
+}
+
+// Appliquer le mixin de transitions à GameScene
+if (typeof MapTransitionMixin !== 'undefined') {
+    Object.assign(GameScene.prototype, MapTransitionMixin);
+    console.log('✅ MapTransitionMixin appliqué à GameScene');
+} else {
+    console.warn('⚠️ MapTransitionMixin non disponible - le système de transitions ne fonctionnera pas');
 }
