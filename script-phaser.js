@@ -1111,6 +1111,7 @@ class GameScene extends Phaser.Scene {
         this.playerGridX = 15;
         this.playerGridY = 15;
         this.moveSpeed = 2.0; // Vitesse de déplacement en pixels par frame
+        this.baseMoveSpeed = 2.0; // Vitesse de base pour le sprint
 
         this.cameras.main.setBounds(0, 0, mapWidth * tileSize, mapHeight * tileSize);
         this.cameras.main.startFollow(this.player);
@@ -1126,6 +1127,23 @@ class GameScene extends Phaser.Scene {
 
         // Gestion de la touche E pour interagir avec les NPCs
         this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+
+        // Mouvements spéciaux
+        this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+        this.jumpKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
+        this.joyKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C);
+
+        // États des mouvements spéciaux
+        this.isSprinting = false;
+        this.isJumping = false;
+        this.isJoyAnimating = false;
+        this.jumpStartTime = 0;
+        this.jumpDuration = 400; // 400ms pour un saut (légèrement plus rapide)
+        this.jumpHeight = 8; // Hauteur du saut en pixels (environ 12% de la hauteur du sprite 64px, doublé par rapport à avant)
+        this.jumpStartY = undefined; // Position Y de départ du saut
+        this.joyStartTime = 0;
+        this.joyDuration = 1000; // 1 seconde pour le mouvement de joie
+        this.baseMoveSpeed = 2.0; // Vitesse de base stockée
 
         // Vérifier que la touche E est bien capturée
         console.log('Touche E initialisée:', this.interactKey ? 'Oui' : 'Non');
@@ -1288,14 +1306,63 @@ class GameScene extends Phaser.Scene {
                     repeat: -1
                 });
             }
+            // Animation de sprint (même frames que walk mais plus rapide)
+            if (!this.anims.exists(`${key}-${direction}-sprint`)) {
+                this.anims.create({
+                    key: `${key}-${direction}-sprint`,
+                    frames: this.anims.generateFrameNumbers(key, { start: walkStart, end: walkEnd }),
+                    frameRate: 18, // Plus rapide que walk
+                    repeat: -1
+                });
+            }
+            // Animation de saut (utilise idle vers le haut/north pour simuler le saut)
+            if (!this.anims.exists(`${key}-${direction}-jump`)) {
+                const jumpRow = offset; // Utilise la même ligne que idle
+                const jumpStart = jumpRow * LPC_COLUMNS;
+                // Animation rapide avec la première frame de idle
+                this.anims.create({
+                    key: `${key}-${direction}-jump`,
+                    frames: [{ key, frame: jumpStart }],
+                    frameRate: 15,
+                    repeat: 0 // Ne se répète pas
+                });
+            }
+            // Animation de joie (utilise spellcast/idle avec répétition rapide)
+            if (!this.anims.exists(`${key}-${direction}-joy`)) {
+                const joyRow = offset;
+                const joyStart = joyRow * LPC_COLUMNS;
+                // Utilise les 3 premières frames de spellcast pour créer un effet animé
+                const joyFrames = [];
+                for (let i = 0; i < 3; i++) {
+                    joyFrames.push({ key, frame: joyStart + i });
+                }
+                this.anims.create({
+                    key: `${key}-${direction}-joy`,
+                    frames: joyFrames,
+                    frameRate: 12,
+                    repeat: 3, // Répète 3 fois pour un effet visible
+                    yoyo: true // Alterne entre avant et arrière pour plus de dynamisme
+                });
+            }
         });
 
         this.createdAnimations.add(key);
     }
 
-    updateCharacterAnimation(characterObj, direction, isMoving) {
+    updateCharacterAnimation(characterObj, direction, isMoving, isSprinting = false, isJumping = false, isJoyAnimating = false) {
         if (!characterObj) return;
-        const animSuffix = isMoving ? 'walk' : 'idle';
+
+        let animSuffix = 'idle';
+
+        // Priorité : joie > saut > sprint > marche > idle
+        if (isJoyAnimating) {
+            animSuffix = 'joy';
+        } else if (isJumping) {
+            animSuffix = 'jump';
+        } else if (isMoving) {
+            animSuffix = isSprinting ? 'sprint' : 'walk';
+        }
+
         characterObj.layers.forEach(layer => {
             const animKey = `${layer.key}-${direction}-${animSuffix}`;
             if (layer.sprite.anims.currentAnim?.key !== animKey) {
@@ -1316,6 +1383,33 @@ class GameScene extends Phaser.Scene {
         const tileSize = this.tilePixelSize;
         const mapWidth = this.mapData?.width || 30;
         const mapHeight = this.mapData?.height || 30;
+
+        // Gestion du mouvement de joie
+        if (this.joyKey && Phaser.Input.Keyboard.JustDown(this.joyKey) && !this.isJoyAnimating && !this.isJumping) {
+            this.isJoyAnimating = true;
+            this.joyStartTime = this.time.now;
+        }
+
+        // Vérifier si l'animation de joie est terminée
+        if (this.isJoyAnimating && (this.time.now - this.joyStartTime) >= this.joyDuration) {
+            this.isJoyAnimating = false;
+        }
+
+        // Gestion du saut
+        if (this.jumpKey && Phaser.Input.Keyboard.JustDown(this.jumpKey) && !this.isJumping && !this.isJoyAnimating) {
+            this.isJumping = true;
+            this.jumpStartTime = this.time.now;
+            this.jumpStartY = this.player.y; // Stocker la position de départ du saut
+        }
+
+        // Note: La vérification de fin de saut est maintenant dans le calcul de jumpVisualOffset
+        // pour éviter les problèmes de timing entre les vérifications
+
+        // Gestion du sprint (maintenir SHIFT)
+        this.isSprinting = this.shiftKey && this.shiftKey.isDown && !this.isJumping && !this.isJoyAnimating;
+
+        // Ajuster la vitesse selon l'état de sprint
+        this.moveSpeed = this.isSprinting ? this.baseMoveSpeed * 2.0 : this.baseMoveSpeed;
 
         // Calculer la direction du mouvement basée sur les touches pressées
         let moveX = 0;
@@ -1339,9 +1433,33 @@ class GameScene extends Phaser.Scene {
             moveY *= 0.707;
         }
 
-        // Calculer la nouvelle position en pixels
-        const newPixelX = this.player.x + moveX * this.moveSpeed;
-        const newPixelY = this.player.y + moveY * this.moveSpeed;
+        // Calculer la nouvelle position en pixels (sans le saut pour les collisions)
+        let newPixelX = this.player.x + moveX * this.moveSpeed;
+        let newPixelY = this.player.y + moveY * this.moveSpeed;
+
+        // Calculer l'offset visuel du saut (séparé des collisions)
+        // EXPLICATION DU CALCUL :
+        // 1. jumpProgress va de 0.0 (début) à 1.0 (fin) sur jumpDuration millisecondes
+        // 2. Math.sin(jumpProgress * Math.PI) crée une courbe : 0 → 1 → 0
+        //    - À 0% : sin(0) = 0 → offset = 0 (au sol)
+        //    - À 50% : sin(π/2) = 1 → offset = jumpHeight (sommet du saut)
+        //    - À 100% : sin(π) = 0 → offset = 0 (retour au sol)
+        // 3. On multiplie par jumpHeight pour obtenir la hauteur en pixels
+        let jumpVisualOffset = 0;
+        if (this.isJumping) {
+            const elapsed = this.time.now - this.jumpStartTime;
+            if (elapsed >= this.jumpDuration) {
+                // Saut terminé : forcer à 0 et arrêter
+                jumpVisualOffset = 0;
+                this.isJumping = false;
+                this.jumpStartY = undefined;
+            } else {
+                // Saut en cours : calculer le progrès (0.0 à 1.0)
+                const jumpProgress = elapsed / this.jumpDuration;
+                // Courbe sinusoïdale : 0 → 1 → 0
+                jumpVisualOffset = Math.sin(jumpProgress * Math.PI) * this.jumpHeight;
+            }
+        }
 
         // Vérifier si on peut passer à travers les obstacles (Phaseur/Éclipseur actif)
         const canPass = this.canPassThrough();
@@ -1389,17 +1507,28 @@ class GameScene extends Phaser.Scene {
             }
         }
 
-        // Mettre à jour la position du personnage
+        // Mettre à jour la position du personnage avec l'offset visuel du saut
+        // EXPLICATION DU CALCUL CORRIGÉ :
+        // - PROBLEME : this.player.y peut changer pendant le saut (mouvement, collisions)
+        // - SOLUTION : Utiliser jumpStartY comme référence fixe pour le saut
+        // - Pendant le saut : container.y = jumpStartY - jumpVisualOffset
+        //   Cela garantit que le saut part toujours de la même position de référence
+        // - Le mouvement horizontal est géré par this.player.x qui change normalement
         this.playerCharacter.container.x = this.player.x;
-        this.playerCharacter.container.y = this.player.y;
 
-        // Mettre à jour les coordonnées de grille pour l'animation
-        this.playerGridX = this.player.x / tileSize;
-        this.playerGridY = this.player.y / tileSize;
+        if (this.isJumping && this.jumpStartY !== undefined) {
+            // Saut en cours : utiliser la position de départ fixe comme référence
+            // On soustrait jumpVisualOffset pour faire monter le personnage visuellement
+            // IMPORTANT : jumpStartY est fixe, donc le saut reste toujours à la même hauteur de référence
+            // Même si this.player.y change (mouvement/collisions), le saut visuel reste stable
+            const newContainerY = this.jumpStartY - jumpVisualOffset;
+            this.playerCharacter.container.y = newContainerY;
 
-        // Mettre à jour la position du personnage
-        this.playerCharacter.container.x = this.player.x;
-        this.playerCharacter.container.y = this.player.y;
+        } else {
+            // Pas de saut ou saut terminé : position normale basée sur la position réelle
+            // this.player.y est la position réelle après collisions et mouvements
+            this.playerCharacter.container.y = this.player.y;
+        }
 
         // Mettre à jour les coordonnées de grille pour l'animation
         this.playerGridX = this.player.x / tileSize;
@@ -1417,7 +1546,19 @@ class GameScene extends Phaser.Scene {
             }
         }
 
-        this.updateCharacterAnimation(this.playerCharacter, direction, isMoving);
+        // Pour le saut, utiliser la direction actuelle (ou vers le haut si pas de mouvement)
+        if (this.isJumping && !isMoving) {
+            direction = this.playerCharacter.direction || 'south';
+        }
+
+        this.updateCharacterAnimation(
+            this.playerCharacter,
+            direction,
+            isMoving,
+            this.isSprinting,
+            this.isJumping,
+            this.isJoyAnimating
+        );
 
         this.updateNPCs();
 
